@@ -3,20 +3,21 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>One Click.</title>
+<title>Signal.</title>
 <meta name="description" content="Just one click. That's it." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,500;1,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#F5F5F1;
-    --ink:#121210;
-    --muted:#8C8C86;
-    --line:#DEDED6;
-    --trap:#DFFA2F;
-    --trap-ink:#1B1D07;
-    --bad:#E8437A;
+    --bg:#06070a;
+    --bg-deep:#030304;
+    --ink:#eef0f2;
+    --muted:#8b93a1;
+    --line:rgba(167,155,214,0.16);
+    --trap:#a79bd6;
+    --trap-ink:#06070a;
+    --bad:#d9425a;
     --ease: cubic-bezier(.16,1,.3,1);
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -27,24 +28,31 @@
     overflow:hidden; -webkit-font-smoothing:antialiased;
     touch-action:manipulation;
   }
+
+  .grain{
+    position:fixed; inset:0; pointer-events:none; z-index:80;
+    opacity:0.035; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
   .stage{
     position:relative; width:100%; height:100dvh;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:8vh 6vw; transition:background .5s var(--ease), color .5s var(--ease);
+    padding:8vh 6vw; transition:background .6s var(--ease), color .6s var(--ease);
   }
-  .stage.won{ background:var(--ink); color:var(--bg); }
+  .stage.won{ background:var(--bg-deep); color:var(--ink); }
 
   .screen{ display:none; text-align:center; width:100%; max-width:520px; }
   .screen.active{ display:flex; flex-direction:column; align-items:center; }
 
   .eyebrow{
-    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.08em;
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.2em;
     color:var(--muted); text-transform:uppercase; margin-bottom:14px;
   }
 
   h1{
-    font-family:'Space Grotesk', sans-serif; font-weight:500;
-    font-size:clamp(24px, 4.2vw, 40px); letter-spacing:-0.02em; margin:0 0 10px;
+    font-family:'Cormorant Garamond', serif; font-weight:300; font-style:italic;
+    font-size:clamp(26px, 4.6vw, 42px); letter-spacing:0.01em; margin:0 0 10px; color:var(--ink);
   }
   .sub{ font-size:14.5px; color:var(--muted); margin:0 0 6vh; max-width:380px; line-height:1.5; }
 
@@ -53,30 +61,30 @@
   #btn{
     position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     padding:18px 34px; font-family:'Inter', sans-serif; font-weight:600; font-size:16px;
-    color:var(--ink); background:#fff; border:1.5px solid var(--ink); border-radius:100px;
+    color:var(--trap-ink); background:var(--ink); border:1.5px solid var(--ink); border-radius:100px;
     cursor:pointer; user-select:none;
     transition:background .18s, border-color .18s, left .38s var(--ease), top .38s var(--ease);
   }
   #btn:focus-visible{ outline:2px solid var(--trap); outline-offset:3px; }
-  #btn.armed{ background:var(--trap); border-color:var(--trap-ink); }
+  #btn.armed{ background:var(--trap); border-color:var(--trap); color:var(--trap-ink); }
 
   /* --- generic primary button --- */
   .primary{
     padding:16px 32px; font-family:'Inter', sans-serif; font-weight:600; font-size:15.5px;
-    color:var(--ink); background:#fff; border:1.5px solid var(--ink); border-radius:100px;
+    color:var(--trap-ink); background:var(--ink); border:1.5px solid var(--ink); border-radius:100px;
     cursor:pointer; transition:background .15s, transform .15s;
   }
   .primary:active{ transform:scale(.97); }
   .primary:disabled{ opacity:.35; cursor:not-allowed; }
-  .primary.hot{ background:var(--trap); border-color:var(--trap-ink); }
+  .primary.hot{ background:var(--trap); border-color:var(--trap); }
 
   /* --- Stage 2: robot checkbox --- */
   .check-row{
-    display:flex; align-items:center; gap:12px; border:1.5px solid var(--ink);
-    border-radius:14px; padding:16px 20px; background:#fff; cursor:pointer; user-select:none;
+    display:flex; align-items:center; gap:12px; border:1.5px solid var(--line);
+    border-radius:14px; padding:16px 20px; background:rgba(255,255,255,0.03); cursor:pointer; user-select:none;
   }
-  .check-row input{ width:20px; height:20px; accent-color:var(--trap-ink); cursor:pointer; }
-  .check-row span{ font-size:14.5px; font-weight:500; }
+  .check-row input{ width:20px; height:20px; accent-color:var(--trap); cursor:pointer; }
+  .check-row span{ font-size:14.5px; font-weight:500; color:var(--ink); }
   .fail-toast{
     margin-top:16px; font-family:'IBM Plex Mono', monospace; font-size:12.5px;
     color:var(--bad); min-height:18px;
@@ -105,12 +113,12 @@
   /* --- Stage 5: terms --- */
   .terms-box{
     width:min(460px, 84vw); max-height:26vh; overflow-y:auto; text-align:left;
-    border:1.5px solid var(--ink); border-radius:14px; padding:18px 20px; background:#fff;
-    font-size:13px; line-height:1.7; color:#333;
+    border:1.5px solid var(--line); border-radius:14px; padding:18px 20px; background:rgba(255,255,255,0.03);
+    font-size:13px; line-height:1.7; color:#c7cbd3;
   }
   .terms-box p{ margin:0 0 10px; }
-  .terms-check{ display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:13px; }
-  .terms-check input{ width:18px; height:18px; accent-color:var(--trap-ink); }
+  .terms-check{ display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:13px; color:var(--ink); }
+  .terms-check input{ width:18px; height:18px; accent-color:var(--trap); }
 
   /* narrator strip */
   .narrator{
@@ -120,31 +128,43 @@
     font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--muted); text-align:center;
     max-width:440px; letter-spacing:0.01em;
   }
-  .stage.won .narrator span{ color:#8C8C7A; }
 
   /* win screen */
   .stage.won .screen:not(#s-win){ display:none !important; }
+  #s-win .eyebrow{ color:var(--trap); }
   #s-win h2{
-    font-family:'Space Grotesk', sans-serif; font-weight:500; font-size:clamp(28px,5vw,46px);
-    color:var(--trap); margin:0 0 14px;
+    font-family:'Cormorant Garamond', serif; font-weight:300; font-style:italic;
+    font-size:clamp(30px,5.4vw,48px);
+    color:var(--ink); margin:0 0 14px;
   }
-  #s-win p.lead{ font-size:14.5px; color:#B9B9AB; line-height:1.6; margin:0 0 26px; max-width:400px; }
+  #s-win p.lead{ font-size:14.5px; color:#9096a8; line-height:1.6; margin:0 0 26px; max-width:400px; }
   .trophy{
-    width:100%; border:1px solid #33332B; border-radius:16px; padding:18px 20px; margin-bottom:22px;
+    width:100%; border:1px solid var(--line); border-radius:16px; padding:18px 20px; margin-bottom:22px;
     text-align:left;
   }
   .trophy-row{
     display:flex; justify-content:space-between; font-family:'IBM Plex Mono', monospace;
-    font-size:12px; color:#B9B9AB; padding:7px 0; border-bottom:1px solid #26261F;
+    font-size:12px; color:#9096a8; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.06);
   }
   .trophy-row:last-child{ border-bottom:none; }
   .trophy-row b{ color:var(--trap); font-weight:500; }
-  .from{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:#8C8C7A; margin-bottom:22px; }
-  .again{
-    background:none; border:1px solid #3A3A32; color:#B9B9AB; font-family:'IBM Plex Mono', monospace;
-    font-size:12px; padding:10px 18px; border-radius:100px; cursor:pointer; transition:border-color .2s, color .2s;
+  .redirect-note{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--muted);
+    letter-spacing:0.1em; text-transform:uppercase; margin-bottom:20px;
   }
-  .again:hover{ border-color:var(--trap); color:var(--trap); }
+  .follow-btn{
+    padding:16px 34px; font-family:'IBM Plex Mono', monospace; font-weight:500; font-size:13px;
+    letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--trap-ink); background:var(--trap); border:1.5px solid var(--trap); border-radius:100px;
+    cursor:pointer; text-decoration:none; display:inline-block; transition:opacity .2s, transform .15s;
+  }
+  .follow-btn:hover{ opacity:.85; }
+  .follow-btn:active{ transform:scale(.97); }
+  .again{
+    background:none; border:none; color:var(--muted); font-family:'IBM Plex Mono', monospace;
+    font-size:11px; padding:14px 0 0; cursor:pointer; transition:color .2s; text-decoration:underline; text-underline-offset:3px;
+  }
+  .again:hover{ color:var(--ink); }
 
   @media (prefers-reduced-motion: reduce){
     #btn{ transition:background .18s, border-color .18s; }
@@ -153,6 +173,8 @@
 </style>
 </head>
 <body>
+
+<div class="grain"></div>
 
 <div class="stage" id="stage">
 
@@ -216,11 +238,13 @@
 
   <!-- WIN -->
   <div class="screen" id="s-win">
-    <h2>Gotcha, darling.</h2>
-    <p class="lead">One click, you thought. That was <span id="winTime">--</span> ago.</p>
+    <div class="eyebrow">Signal acquired</div>
+    <h2>You weren't supposed to get this far.</h2>
+    <p class="lead">One click, you thought. That was <span id="winTime">--</span> ago. Something's still transmitting.</p>
     <div class="trophy" id="trophy"></div>
-    <div class="from">— with love, <span id="fromName">someone who knows you far too well</span></div>
-    <button class="again" id="again">Fall for it again</button>
+    <div class="redirect-note" id="redirectNote">Following the signal in <span id="countdownNum">5</span>…</div>
+    <a class="follow-btn" id="followBtn" href="#" target="_top">Follow it now →</a>
+    <button class="again" id="again">Or fall for it again</button>
   </div>
 
   <div class="narrator"><span id="narrator"></span></div>
@@ -229,6 +253,8 @@
 <script>
 (function(){
   var FROM_NAME = ""; // put the sender's name here
+  var REDIRECT_URL = "https://xharmony-star.vercel.app"; // the real site
+  var REDIRECT_DELAY = 5; // seconds before auto-redirect
 
   var stageEl = document.getElementById('stage');
   var narrator = document.getElementById('narrator');
@@ -395,7 +421,10 @@
   });
   termsBtn.addEventListener('click', function(){ win(); });
 
-  /* ---------- WIN ---------- */
+  /* ---------- WIN / REVEAL ---------- */
+  var redirectTimer = null;
+  var countdownTimer = null;
+
   function fmtTime(ms){
     var s = Math.round(ms/1000);
     if (s < 60) return s + " seconds";
@@ -406,7 +435,6 @@
   function win(){
     var elapsed = Date.now() - startTime;
     document.getElementById('winTime').textContent = fmtTime(elapsed);
-    if (FROM_NAME) document.getElementById('fromName').textContent = FROM_NAME;
     var trophy = document.getElementById('trophy');
     trophy.innerHTML =
       '<div class="trophy-row"><span>Time invested</span><b>' + fmtTime(elapsed) + '</b></div>' +
@@ -417,9 +445,29 @@
       '<div class="trophy-row"><span>Prize won</span><b>None, darling</b></div>';
     say("");
     stageEl.classList.add('won');
+
+    var followBtn = document.getElementById('followBtn');
+    followBtn.href = REDIRECT_URL;
+
+    var n = REDIRECT_DELAY;
+    var countdownNum = document.getElementById('countdownNum');
+    countdownNum.textContent = n;
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(function(){
+      n--;
+      if (n <= 0){ clearInterval(countdownTimer); return; }
+      countdownNum.textContent = n;
+    }, 1000);
+
+    clearTimeout(redirectTimer);
+    redirectTimer = setTimeout(function(){
+      window.top.location.href = REDIRECT_URL;
+    }, REDIRECT_DELAY * 1000);
   }
 
   document.getElementById('again').addEventListener('click', function(){
+    clearTimeout(redirectTimer);
+    clearInterval(countdownTimer);
     stageEl.classList.remove('won');
     dodgeCount = 0; stats = { dodges:0, robotFails:0, sliderSnaps:0, loadingResets:0 };
     btn.classList.remove('armed'); btn.textContent = "Click me";
