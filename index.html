@@ -105,12 +105,46 @@
   }
   .slider-labels{ display:flex; justify-content:space-between; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--muted); }
 
-  /* --- Stage 4: loading --- */
+  /* --- Stage 4: simon memory game --- */
+  .simon-grid{
+    display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;
+    width:min(240px, 66vw); margin:4px 0 20px;
+  }
+  .simon-pad{
+    aspect-ratio:1; border-radius:18px; border:1.5px solid var(--line);
+    background:rgba(255,255,255,0.03); color:var(--muted);
+    font-size:26px; cursor:pointer; user-select:none;
+    transition:background .15s, color .15s, transform .1s, border-color .15s;
+  }
+  .simon-pad.active{ background:var(--trap); color:var(--trap-ink); border-color:var(--trap); transform:scale(1.05); }
+  .simon-pad:active{ transform:scale(.94); }
+  .simon-status{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--muted);
+    letter-spacing:0.1em; text-transform:uppercase; min-height:16px;
+  }
+
+  /* --- Stage 5: quiz --- */
+  .quiz-q{ font-size:15.5px; color:var(--ink); margin:0 0 20px; max-width:360px; line-height:1.5; }
+  .quiz-options{ display:flex; flex-direction:column; gap:10px; width:min(320px, 82vw); }
+  .quiz-opt{
+    padding:14px 18px; border-radius:12px; border:1.5px solid var(--line);
+    background:rgba(255,255,255,0.03); color:var(--ink); font-family:'Inter', sans-serif;
+    font-size:14px; cursor:pointer; transition:background .15s, border-color .15s;
+    text-align:left;
+  }
+  .quiz-opt:hover{ border-color:var(--trap); }
+  .quiz-opt:disabled{ opacity:.4; cursor:not-allowed; }
+  .quiz-reply{
+    margin-top:18px; font-family:'IBM Plex Mono', monospace; font-size:12.5px;
+    color:var(--trap); min-height:18px;
+  }
+
+  /* --- Stage 6: loading --- */
   .bar-track{ width:min(420px, 80vw); height:10px; border-radius:6px; background:var(--line); overflow:hidden; margin:8px 0 14px; }
   .bar-fill{ height:100%; width:0%; background:var(--trap); border-radius:6px; transition:width .5s var(--ease); }
   .bar-pct{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--muted); }
 
-  /* --- Stage 5: terms --- */
+  /* --- Stage 7: terms --- */
   .terms-box{
     width:min(460px, 84vw); max-height:26vh; overflow-y:auto; text-align:left;
     border:1.5px solid var(--line); border-radius:14px; padding:18px 20px; background:rgba(255,255,255,0.03);
@@ -208,7 +242,36 @@
     </div>
   </div>
 
-  <!-- STAGE 4: loading -->
+  <!-- STAGE 4: simon memory game -->
+  <div class="screen" id="s-simon">
+    <div class="eyebrow">Actual test now</div>
+    <h1>Repeat the pattern.</h1>
+    <p class="sub" id="simonSub">Watch closely. It only shows once.</p>
+    <div class="simon-grid" id="simonGrid">
+      <button class="simon-pad" data-idx="0">✦</button>
+      <button class="simon-pad" data-idx="1">▲</button>
+      <button class="simon-pad" data-idx="2">●</button>
+      <button class="simon-pad" data-idx="3">■</button>
+    </div>
+    <div class="simon-status" id="simonStatus">Round 1 of 3</div>
+  </div>
+
+  <!-- STAGE 5: absurd quiz -->
+  <div class="screen" id="s-quiz">
+    <div class="eyebrow">Totally unrelated</div>
+    <h1>Quick poll.</h1>
+    <p class="sub">Purely academic. No wrong answers. (There are wrong answers.)</p>
+    <div class="quiz-q">Be honest — what is this page, really?</div>
+    <div class="quiz-options" id="quizOptions">
+      <button class="quiz-opt" data-r="0">A trap</button>
+      <button class="quiz-opt" data-r="1">Modern art</button>
+      <button class="quiz-opt" data-r="2">A cry for help</button>
+      <button class="quiz-opt" data-r="3">42</button>
+    </div>
+    <div class="quiz-reply" id="quizReply"></div>
+  </div>
+
+  <!-- STAGE 6: loading -->
   <div class="screen" id="s-loading">
     <div class="eyebrow">Almost there</div>
     <h1 id="loadTitle">Processing …</h1>
@@ -217,7 +280,7 @@
     <div class="bar-pct" id="barPct">0%</div>
   </div>
 
-  <!-- STAGE 5: terms -->
+  <!-- STAGE 7: terms -->
   <div class="screen" id="s-terms">
     <div class="eyebrow">Last step</div>
     <h1>Almost unbearable, isn't it?</h1>
@@ -260,7 +323,7 @@
   var narrator = document.getElementById('narrator');
   var startTime = Date.now();
 
-  var stats = { dodges:0, robotFails:0, sliderSnaps:0, loadingResets:0 };
+  var stats = { dodges:0, robotFails:0, sliderSnaps:0, simonFails:0 };
 
   function say(text){ narrator.textContent = text; }
 
@@ -274,6 +337,8 @@
   var btn = document.getElementById('btn');
   var MAX_DODGES = 7;
   var dodgeCount = 0;
+  var armLock = false;
+  var ARM_LOCK_MS = 550;
 
   var taunts = ["Click me","Oh darling.","Try harder.","Nice try, sweetie.","Aw, so close.","You're too slow.","...ok fine, here."];
   var dodgeLines = [
@@ -297,12 +362,24 @@
     var padX=bw/2+6, padY=bh/2+6;
     btn.style.left = rand(padX, Math.max(padX+1, zw-padX)) + "px";
     btn.style.top = rand(padY, Math.max(padY+1, zh-padY)) + "px";
-    if (dodgeCount >= MAX_DODGES) btn.classList.add('armed');
+    if (dodgeCount >= MAX_DODGES){
+      btn.classList.add('armed');
+      // the gesture that just armed it must not double-count as the winning click
+      armLock = true;
+      setTimeout(function(){ armLock = false; }, ARM_LOCK_MS);
+    }
   }
 
-  btn.addEventListener('pointerenter', function(){ if (dodgeCount < MAX_DODGES) dodge(); });
-  btn.addEventListener('touchstart', function(e){ if (dodgeCount < MAX_DODGES){ e.preventDefault(); dodge(); } }, {passive:false});
+  btn.addEventListener('pointerenter', function(){
+    if (armLock) return;
+    if (dodgeCount < MAX_DODGES) dodge();
+  });
+  btn.addEventListener('touchstart', function(e){
+    if (armLock){ e.preventDefault(); return; }
+    if (dodgeCount < MAX_DODGES){ e.preventDefault(); dodge(); }
+  }, {passive:false});
   btn.addEventListener('click', function(e){
+    if (armLock){ e.preventDefault(); return; }
     if (dodgeCount < MAX_DODGES){ e.preventDefault(); dodge(); return; }
     say("Oh. That was easier than expected. Too easy.");
     setTimeout(function(){ showScreen('s-robot'); say("Formality number one, darling."); }, 500);
@@ -353,16 +430,120 @@
       slider.value = 0;
       return;
     }
-    say("It actually worked. How shocking.");
-    setTimeout(function(){ showScreen('s-loading'); startLoading(); }, 400);
+    say("It actually worked. How shocking. Now for something real.");
+    setTimeout(function(){ showScreen('s-simon'); startSimon(); }, 500);
   });
 
-  /* ---------- STAGE 4: fake loading ---------- */
+  /* ---------- STAGE 4: simon memory game (actually real) ---------- */
+  var simonPads = document.querySelectorAll('.simon-pad');
+  var simonSub = document.getElementById('simonSub');
+  var simonStatus = document.getElementById('simonStatus');
+  var SIMON_ROUNDS = 3;
+  var simonSeq = [];
+  var simonRound = 0;
+  var simonUserIdx = 0;
+  var simonAccepting = false;
+
+  var simonFailLines = [
+    "Nope. Try to keep up, darling.",
+    "Still no. It's really not that hard, love.",
+    "Impressively wrong. Again."
+  ];
+  var simonPassLines = [
+    "Fine. Next round, darling.",
+    "Ok, that was actually decent."
+  ];
+
+  function simonFlash(idx, cb){
+    var pad = simonPads[idx];
+    pad.classList.add('active');
+    setTimeout(function(){ pad.classList.remove('active'); if (cb) cb(); }, 320);
+  }
+
+  function playSimonSequence(){
+    simonAccepting = false;
+    simonUserIdx = 0;
+    simonStatus.textContent = "Watch.";
+    var i = 0;
+    function step(){
+      if (i >= simonSeq.length){
+        simonAccepting = true;
+        simonStatus.textContent = "Your turn.";
+        return;
+      }
+      simonFlash(simonSeq[i], function(){ i++; setTimeout(step, 160); });
+    }
+    setTimeout(step, 500);
+  }
+
+  function nextSimonRound(){
+    simonRound++;
+    simonSeq.push(Math.floor(Math.random()*4));
+    simonStatus.textContent = "Round " + simonRound + " of " + SIMON_ROUNDS;
+    playSimonSequence();
+  }
+
+  function startSimon(){
+    simonSeq = []; simonRound = 0; stats.simonFails = 0;
+    simonSub.textContent = "Watch closely. It only shows once.";
+    nextSimonRound();
+  }
+
+  simonPads.forEach(function(pad){
+    pad.addEventListener('click', function(){
+      if (!simonAccepting) return;
+      var idx = Number(pad.dataset.idx);
+      simonFlash(idx);
+      if (idx === simonSeq[simonUserIdx]){
+        simonUserIdx++;
+        if (simonUserIdx === simonSeq.length){
+          simonAccepting = false;
+          if (simonRound >= SIMON_ROUNDS){
+            simonStatus.textContent = "Passed. Reluctantly impressed.";
+            say("Ok. That was... actually good. One more thing.");
+            setTimeout(function(){ showScreen('s-quiz'); }, 800);
+          } else {
+            say(simonPassLines[Math.min(simonRound-1, simonPassLines.length-1)]);
+            setTimeout(nextSimonRound, 700);
+          }
+        }
+      } else {
+        stats.simonFails++;
+        simonAccepting = false;
+        simonStatus.textContent = "Wrong. Watch again.";
+        say(simonFailLines[Math.min(stats.simonFails-1, simonFailLines.length-1)]);
+        setTimeout(playSimonSequence, 900);
+      }
+    });
+  });
+
+  /* ---------- STAGE 5: absurd quiz ---------- */
+  var quizOptions = document.getElementById('quizOptions');
+  var quizReply = document.getElementById('quizReply');
+  var quizReplyLines = [
+    "Correct. Alarmingly self-aware of you.",
+    "Sure. Let's go with that.",
+    "...also correct, unfortunately.",
+    "Wrong page. But respect the confidence."
+  ];
+
+  quizOptions.querySelectorAll('.quiz-opt').forEach(function(opt){
+    opt.addEventListener('click', function(){
+      var r = Number(opt.dataset.r);
+      quizReply.textContent = quizReplyLines[r];
+      quizOptions.querySelectorAll('.quiz-opt').forEach(function(o){ o.disabled = true; });
+      say("Anyway. Back to the actual point.");
+      setTimeout(function(){ showScreen('s-loading'); startLoading(); }, 1100);
+    });
+  });
+
+  /* ---------- STAGE 6: fake loading ---------- */
   var barFill = document.getElementById('barFill');
   var barPct = document.getElementById('barPct');
   var loadTitle = document.getElementById('loadTitle');
   var loadSub = document.getElementById('loadSub');
   var LOADING_RESETS_NEEDED = 2;
+  var loadingResets = 0;
 
   function animateBar(to, duration, cb){
     var start = parseFloat(barFill.style.width) || 0;
@@ -379,14 +560,14 @@
 
   function loadingRound(){
     loadTitle.textContent = "Processing …";
-    loadSub.textContent = stats.loadingResets === 0 ? "Please don't close this, darling." : "This time for real.";
+    loadSub.textContent = loadingResets === 0 ? "Please don't close this, darling." : "This time for real.";
     animateBar(98, 900, function(){
       setTimeout(function(){
-        if (stats.loadingResets < LOADING_RESETS_NEEDED){
-          stats.loadingResets++;
-          loadTitle.textContent = stats.loadingResets === 1 ? "Oh honey. The server has doubts." : "The server doubts you again.";
-          loadSub.textContent = stats.loadingResets === 1 ? "Recalculating." : "This is embarrassing for both of us.";
-          say(stats.loadingResets === 1 ? "98%. And back to zero. Classic, darling." : "Are you f***ing serious right now.");
+        if (loadingResets < LOADING_RESETS_NEEDED){
+          loadingResets++;
+          loadTitle.textContent = loadingResets === 1 ? "Oh honey. The server has doubts." : "The server doubts you again.";
+          loadSub.textContent = loadingResets === 1 ? "Recalculating." : "This is embarrassing for both of us.";
+          say(loadingResets === 1 ? "98%. And back to zero. Classic, darling." : "Are you f***ing serious right now.");
           barFill.style.transition = "none";
           barFill.style.width = "4%"; barPct.textContent = "4%";
           void barFill.offsetWidth;
@@ -403,11 +584,12 @@
   }
   function startLoading(){
     barFill.style.width = "0%"; barPct.textContent = "0%";
+    loadingResets = 0;
     say("Last formality. Probably.");
     loadingRound();
   }
 
-  /* ---------- STAGE 5: terms ---------- */
+  /* ---------- STAGE 7: terms ---------- */
   var termsCheck = document.getElementById('termsCheck');
   var termsBtn = document.getElementById('termsBtn');
   termsCheck.addEventListener('change', function(){
@@ -441,7 +623,8 @@
       '<div class="trophy-row"><span>Times you got dodged</span><b>' + stats.dodges + 'x</b></div>' +
       '<div class="trophy-row"><span>Mistaken for a robot</span><b>' + stats.robotFails + 'x</b></div>' +
       '<div class="trophy-row"><span>Slider reset on you</span><b>' + stats.sliderSnaps + 'x</b></div>' +
-      '<div class="trophy-row"><span>Progress bar lied</span><b>' + stats.loadingResets + 'x</b></div>' +
+      '<div class="trophy-row"><span>Pattern misremembered</span><b>' + stats.simonFails + 'x</b></div>' +
+      '<div class="trophy-row"><span>Loading bar lied</span><b>' + loadingResets + 'x</b></div>' +
       '<div class="trophy-row"><span>Prize won</span><b>None, darling</b></div>';
     say("");
     stageEl.classList.add('won');
@@ -469,11 +652,15 @@
     clearTimeout(redirectTimer);
     clearInterval(countdownTimer);
     stageEl.classList.remove('won');
-    dodgeCount = 0; stats = { dodges:0, robotFails:0, sliderSnaps:0, loadingResets:0 };
+    dodgeCount = 0;
+    armLock = false;
+    stats = { dodges:0, robotFails:0, sliderSnaps:0, simonFails:0 };
     btn.classList.remove('armed'); btn.textContent = "Click me";
     btn.style.left = "50%"; btn.style.top = "50%";
     robotCheck.checked = false; robotToast.textContent = "";
     slider.value = 0; sliderSub.textContent = sliderSubLines[0];
+    quizReply.textContent = "";
+    quizOptions.querySelectorAll('.quiz-opt').forEach(function(o){ o.disabled = false; });
     termsCheck.checked = false; termsBtn.disabled = true; termsBtn.classList.remove('hot');
     startTime = Date.now();
     showScreen('s-button');
